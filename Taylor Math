@@ -1,1 +1,145 @@
+#pragma once
+#include <stdexcept>
+
+namespace taylor {
+
+// ─────────────────────────────────────────────
+//  Constantes
+// ─────────────────────────────────────────────
+constexpr double PI      = 3.14159265358979323846;
+constexpr double E       = 2.71828182845904523536;
+constexpr int    TERMS   = 50;   // términos de la serie
+
+// ─────────────────────────────────────────────
+//  Valor absoluto  |x|
+// ─────────────────────────────────────────────
+inline double abs_val(double x) {
+    return (x < 0.0) ? -x : x;
+}
+
+// ─────────────────────────────────────────────
+//  Factorial  n!  (double para evitar overflow)
+// ─────────────────────────────────────────────
+inline double factorial(int n) {
+    double result = 1.0;
+    for (int i = 2; i <= n; ++i)
+        result *= i;
+    return result;
+}
+
+// ─────────────────────────────────────────────
+//  Potencia entera  base^exp
+// ─────────────────────────────────────────────
+inline double power_int(double base, int exp) {
+    if (exp == 0) return 1.0;
+    double result = 1.0;
+    bool negative = (exp < 0);
+    int  n        = negative ? -exp : exp;
+    for (int i = 0; i < n; ++i)
+        result *= base;
+    return negative ? 1.0 / result : result;
+}
+
+// ─────────────────────────────────────────────
+//  Raíz cuadrada  √x   (método de Newton-Raphson)
+//  Aproximación que converge cuadráticamente.
+// ─────────────────────────────────────────────
+inline double sqrt_val(double x) {
+    if (x < 0.0)
+        throw std::domain_error("sqrt: argumento negativo");
+    if (x == 0.0) return 0.0;
+
+    double guess = x > 1.0 ? x / 2.0 : 1.0;
+    for (int i = 0; i < 100; ++i) {
+        double next = 0.5 * (guess + x / guess);
+        if (abs_val(next - guess) < 1e-15) break;
+        guess = next;
+    }
+    return guess;
+}
+
+// ─────────────────────────────────────────────
+//  Exponencial  e^x   (serie de Taylor)
+//
+//  e^x = Σ  x^n / n!   para n = 0..∞
+//
+//  Para |x| grande se usa:  e^x = (e^(x/k))^k
+//  con k = 2^m (exponenciación por cuadrado).
+// ─────────────────────────────────────────────
+inline double exp_val(double x) {
+    // Reducción: dividir x hasta |x| ≤ 0.5
+    int    k    = 0;
+    double xred = x;
+    while (abs_val(xred) > 0.5) {
+        xred /= 2.0;
+        ++k;
+    }
+
+    // Serie de Taylor para xred
+    double term   = 1.0;
+    double result = 1.0;
+    for (int n = 1; n <= TERMS; ++n) {
+        term   *= xred / n;
+        result += term;
+        if (abs_val(term) < 1e-16) break;
+    }
+
+    // Elevar al cuadrado k veces
+    for (int i = 0; i < k; ++i)
+        result *= result;
+
+    return result;
+}
+
+// ─────────────────────────────────────────────
+//  Seno  sin(x)   (serie de Taylor)
+//
+//  sin(x) = Σ  (-1)^n * x^(2n+1) / (2n+1)!
+//
+//  Reducción de rango al intervalo [-π/2, π/2].
+// ─────────────────────────────────────────────
+inline double sin_val(double x) {
+    // Reducir x módulo 2π
+    double twopi = 2.0 * PI;
+    x -= twopi * (int)(x / twopi);
+    if (x >  PI) x -= twopi;
+    if (x < -PI) x += twopi;
+
+    double term   = x;
+    double result = x;
+    double x2     = x * x;
+
+    for (int n = 1; n <= TERMS; ++n) {
+        term   *= -x2 / ((2*n) * (2*n + 1));
+        result += term;
+        if (abs_val(term) < 1e-16) break;
+    }
+    return result;
+}
+
+// ─────────────────────────────────────────────
+//  Coseno  cos(x)   (serie de Taylor)
+//
+//  cos(x) = Σ  (-1)^n * x^(2n) / (2n)!
+// ─────────────────────────────────────────────
+inline double cos_val(double x) {
+    // Reducir x módulo 2π
+    double twopi = 2.0 * PI;
+    x -= twopi * (int)(x / twopi);
+    if (x >  PI) x -= twopi;
+    if (x < -PI) x += twopi;
+
+    double term   = 1.0;
+    double result = 1.0;
+    double x2     = x * x;
+
+    for (int n = 1; n <= TERMS; ++n) {
+        term   *= -x2 / ((2*n - 1) * (2*n));
+        result += term;
+        if (abs_val(term) < 1e-16) break;
+    }
+    return result;
+}
+
+} // namespace taylor
 
